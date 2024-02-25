@@ -8,3 +8,7 @@ dotenv.config({
     path:'./env'
 })
 connectDB()
+.then(
+    
+)
+.catch(err=>console.log("Error in connecting to the database ", err))
