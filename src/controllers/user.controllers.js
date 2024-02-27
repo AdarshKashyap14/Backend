@@ -160,7 +160,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: { refreshToken: undefined },
+      $unset: { refreshToken: 1 },
     },
     {
       new: true,
@@ -231,9 +231,9 @@ const changeUserPassword = asyncHandler(async (req, res) => {
   if (!(oldPassword || newPassword)) {
     throw new apiError(400, "Please provide old and new password");
   }
-  const user = await User.findById(req.user._id);
-  const isPasswordCorrect = await req.user.isPasswordCorrect(oldPassword);
-  if (!isPasswordCorrect) {
+  const user = await User.findById(req.user?._id);
+  const passwordCorrect = await user.isPasswordCorrect(oldPassword);
+  if (!passwordCorrect) {
     throw new apiError(401, "Invalid old password");
   }
 
@@ -401,7 +401,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         coverImage: 1,
         subscriberCount: 1,
         subscriptionCount: 1,
-        isSubscribed : 1
+        isSubscribed: 1,
       },
     },
   ]);
@@ -410,60 +410,66 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new apiError(404, "Channel not found");
   }
 
-  return res.status(200)
-            .json(new apiResponse(200, channel[0], "Channel details fetched successfully" ));
+  return res
+    .status(200)
+    .json(
+      new apiResponse(200, channel[0], "Channel details fetched successfully")
+    );
 });
 
-const getWatchHistory = asyncHandler(async(req , res) => {
-  const user = await User.aggregate(
-    [
-      {
-        $match : {
-          _id : new mongoose.Types.ObjectId(req.user?._id) //convert string to object id
-        }
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id), //convert string to object id
       },
-      {
-        $lookup : {
-          from : "videos",
-          localField : "watchHistory",
-          foreignField : "_id",
-          as : "watchHistory",
-          pipeline : [
-            {
-              $lookup : {
-                from : "users",
-                localField : "owner",
-                foreignField : "_id",
-                as : "owner",
-                pipeline : [
-                  {
-                    $project : {
-                      username : 1,
-                      fullname: 1,
-                      avatar : 1
-                    }
-                  }
-                ]
-              
-              }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
             },
-            {
-              $addFields : {
-                owner : {
-                  $first : "$owner"
-                }
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
-              }
-            }
-          ]
-        }
-      }
-    ]
-  )
-
-  return res.status(200)
-            .json(new apiResponse(200, user[0]?.watchHistory, "Watch history fetched successfully" ));
-})
+  return res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        user[0]?.watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
+});
 
 export {
   registerUser,
@@ -477,5 +483,5 @@ export {
   updateUSerCoverImage,
   forgetPassword,
   getUserChannelProfile,
-  getWatchHistory
+  getWatchHistory,
 };
