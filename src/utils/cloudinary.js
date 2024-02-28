@@ -28,4 +28,31 @@ const uploadToCloudinary = async (filePath) => {
   }
 };
 
-export  {uploadToCloudinary};
+const deleteFromCloudinary = async (publicId) => {
+  try {
+    if(!publicId) return null;
+    //delete from cloudinary
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    if(!result){
+      console.log("Error deleting from cloudinary", result);
+      return null;
+    
+    };
+    //successful delete
+    console.log("File is deleted from cloudinary", result);
+    return result;
+  } catch (error) {
+    console.log("Error deleting from cloudinary", error);
+    return null;
+  }
+};
+
+const extractPublicId = (url) => {
+  const parts = url.split('/');
+  const publicIdWithExtension = parts[parts.length - 1];
+  const publicId = publicIdWithExtension.split('.')[0];
+  return publicId;
+};
+
+export  {uploadToCloudinary , deleteFromCloudinary , extractPublicId};
