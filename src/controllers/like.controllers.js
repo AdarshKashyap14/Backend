@@ -4,6 +4,7 @@ import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Video } from "../models/video.model.js";
+import {Tweet} from "../models/tweet.model.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
@@ -97,9 +98,6 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   }
 
   const videos = await Video.find({ likes: userId });
-  //   if(videos.length === 0){
-  //     throw new apiError(404, "No liked videos found");
-  //   }
   res
     .status(200)
     .json(new apiResponse(200, videos, "Liked videos fetched successfully"));
