@@ -14,9 +14,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   //TODO: get all videos based on query, sort, pagination
   const user = await User.findById(userId);
-  if (!user) {
-    throw new apiError(400, "userId is required");
-  }
   if (!isValidObjectId(user)) {
     throw new apiError(400, "userId is invalid");
   }
