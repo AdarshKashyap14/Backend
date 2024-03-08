@@ -171,6 +171,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true,
   };
+  console.log("logout");
 
   return res
     .status(200)
@@ -212,8 +213,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .cookie("AccessToken", AccessToken, option)
-      .cookie("RefreshToken", RefreshToken, option)
+      .cookie("AccessToken", accessToken, option)
+      .cookie("RefreshToken", newrefreshToken, option)
       .json(
         new apiResponse(
           200,
@@ -269,7 +270,7 @@ const updateUserAccount = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new apiResponse(200, user, "User details updated successfully"));
+    .json(new apiResponse(200, {user:user}, "User details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -294,10 +295,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       new: true,
     }
   ).select("-password -refreshToken");
-
+  console.log(user);
   res
     .status(200)
-    .json(new apiResponse(200, user, "Avatar updated successfully"));
+    .json(new apiResponse(200, { user: user }, "Avatar updated successfully"));
 });
 
 const updateUSerCoverImage = asyncHandler(async (req, res) => {
@@ -325,7 +326,7 @@ const updateUSerCoverImage = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new apiResponse(200, user, "Cover Image updated successfully"));
+    .json(new apiResponse(200, {user : user}, "Cover Image updated successfully"));
 });
 
 const forgetPassword = asyncHandler(async (req, res) => {
