@@ -7,7 +7,7 @@ const userSchema = new Schema(
     username: {
       type: String,
       lowercase: true,
-      require: true,
+      required: true,
       trim: true,
       unique: true,
       index: true,
@@ -15,19 +15,19 @@ const userSchema = new Schema(
     email: {
       type: String,
       lowercase: true,
-      require: true,
+      required: true,
       trim: true,
       unique: true,
     },
     fullname: {
       type: String,
-      require: true,
+      required: true,
       trim: true,
       index: true,
     },
     avatar: {
       type: String, //cloudnariry url
-      require: true,
+      required: true,
     },
     coverImage: {
       type: String, // cloudinary url
@@ -40,7 +40,7 @@ const userSchema = new Schema(
     ],
     password: {
       type: String,
-      require: [true, "Why you no passord?"],
+      required: [true, "Why you no passord?"],
     },
     refershToken: {
       type: String,

@@ -49,20 +49,40 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const {subscriberId} = req.params;
-    if (!subscriberId) {
-      throw new apiError(400, "subscriberId is required to get channel subscribers");
+  const { subscriberId } = req.params;
+  if (!subscriberId) {
+    throw new apiError(
+      400,
+      "subscriberId is required to get channel subscribers"
+    );
+  }
+  try {
+    const subscribers = await Subscription.find({ channel: subscriberId });
+    //get the user info of the channel
+    const owner = await User.findById(subscribers[0].channel);
+    if (!owner) {
+      throw new apiError(404, "Owner not found");
     }
-    try {
-      const subscribers = await Subscription.find({ channel: subscriberId });
-      res
-        .status(200)
-        .json(
-          new apiResponse(200, subscribers, "Channel subscribers fetched successfully")
-        );
-    } catch (error) {
-      throw new apiError(500, "Error in fetching channel subscribers");
-    }
+    const responseData = {
+      subscribers: subscribers,
+      owner: {
+        avatar: owner.avatar,
+        username: owner.username,
+      },
+    };
+
+    res
+      .status(200)
+      .json(
+        new apiResponse(
+          200,
+          responseData,
+          "Channel subscribers fetched successfully"
+        )
+      );
+  } catch (error) {
+    throw new apiError(500, "Error in fetching channel subscribers");
+  }
 });
 
 // controller to return channel list to which user has subscribed
@@ -70,18 +90,28 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
   const subscriberId = req.user?._id;
   if (!subscriberId) {
-    throw new apiError(400, "subscriberId is required to get subscribed channels");
+    throw new apiError(
+      400,
+      "subscriberId is required to get subscribed channels"
+    );
   }
- try {
-   const channels = await Subscription.find({ channel:channelId, subscriber: subscriberId});
-   res
-     .status(200)
-     .json(
-       new apiResponse(200, channels, "Subscribed channels fetched successfully")
-     );
- } catch (error) {
+  try {
+    const channels = await Subscription.find({
+      channel: channelId,
+      subscriber: subscriberId,
+    });
+    res
+      .status(200)
+      .json(
+        new apiResponse(
+          200,
+          channels,
+          "Subscribed channels fetched successfully"
+        )
+      );
+  } catch (error) {
     throw new apiError(500, "Error in fetching subscribed channels");
- }
+  }
 });
 
 export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };

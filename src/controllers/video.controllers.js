@@ -10,6 +10,16 @@ import {
   extractPublicId,
 } from "../utils/cloudinary.js";
 
+
+//TODO: to get all videos and details to show on home page
+const allVideos = asyncHandler(async (req, res) => {
+  //TODO: get all videos in videos
+  const videos = await Video.find({}).populate("owner", "username avatar");
+  res.status(200).json(new apiResponse(200, videos, "Videos fetched successfully"));
+});
+
+
+
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   //TODO: get all videos based on query, sort, pagination
@@ -86,7 +96,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
   if (!videoLink.url && !thumbnailLink.url) {
     throw new apiError(500, "Failed to upload video and thumbnail");
   }
-  // console.log(videoLink, thumbnailLink);
+
 
   const video = new Video({
     videoFile: videoLink.url,
@@ -155,6 +165,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  
   //TODO: delete video
 
   const video = await Video.findById(videoId);
@@ -165,7 +176,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
   const ownerOfVideo = video.owner.toString();
   const userId =  req.user?._id.toString();
- 
+ console.log(ownerOfVideo, req.user);
 
   if (ownerOfVideo !== userId) {
     throw new apiError(403, "You are not authorized to delete this video");
@@ -205,4 +216,5 @@ export {
   updateVideo,
   deleteVideo,
   togglePublishStatus,
+  allVideos
 };

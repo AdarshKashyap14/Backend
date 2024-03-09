@@ -5,7 +5,7 @@ const commentSchema = new Schema(
   {
     content: {
       type: String,
-      require: true,
+      required: true,
     },
     owner: {
       type: Schema.Types.ObjectId,
