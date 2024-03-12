@@ -4,37 +4,31 @@ import { User } from "../models/user.model.js";
 import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Like } from "../models/like.model.js";
+import { Comment } from "../models/comment.model.js";
 import {
   uploadToCloudinary,
   deleteFromCloudinary,
   extractPublicId,
 } from "../utils/cloudinary.js";
 
-
 //TODO: to get all videos and details to show on home page
 const allVideos = asyncHandler(async (req, res) => {
-  //TODO: get all videos in videos
-  const videos = await Video.find({}).populate("owner", "username avatar");
-  res.status(200).json(new apiResponse(200, videos, "Videos fetched successfully"));
+  //TODO: get all videos in videos that are published
+
+  const videos = await Video.find({
+    status: "isPublished"
+  }).populate("owner", "username avatar");
+  res
+    .status(200)
+    .json(new apiResponse(200, videos, "Videos fetched successfully"));
 });
 
-
-
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
-  const user = await User.findById(userId);
-  if (!isValidObjectId(user)) {
-    throw new apiError(400, "userId is invalid");
-  }
+  const { page = 1, limit = 2, query, sortBy, sortType } = req.query;
 
   try {
     const videos = await Video.aggregate([
-      {
-        $match: {
-          owner: new mongoose.Types.ObjectId(userId),
-        },
-      },
       {
         $match: {
           $or: [
@@ -55,6 +49,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
         $limit: limit,
       },
       {
+        $lookup: {
+          from: "users", // Assuming your user collection is named "users"
+          localField: "owner", // Field in the videos collection
+          foreignField: "_id", // Field in the users collection
+          as: "ownerInfo", // Alias for the retrieved user information
+        },
+      },
+      {
         $project: {
           title: 1,
           description: 1,
@@ -65,6 +67,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
           isPublished: 1,
           createdAt: 1,
           updatedAt: 1,
+          ownerInfo: {
+            _id: 1,
+            avatar: 1,
+            username: 1,
+            subscribers: 1,
+          },
         },
       },
     ]);
@@ -75,7 +83,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new apiError(
       400,
-      error?.message || "Something went wrong will getting vedios"
+      error?.message || "Something went wrong while getting videos"
     );
   }
 });
@@ -97,7 +105,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new apiError(500, "Failed to upload video and thumbnail");
   }
 
-
   const video = new Video({
     videoFile: videoLink.url,
     thumbnail: thumbnailLink.url,
@@ -118,7 +125,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   //TODO: get video by id
   const video = await Video.findById(videoId);
   if (!video) {
-    throw new apiError(404, "Video not found");
+    throw new apiError(404, "Video not found with this id");
   }
   res
     .status(200)
@@ -130,27 +137,33 @@ const updateVideo = asyncHandler(async (req, res) => {
   //TODO: update video details like title, description, thumbnail
   const video = await Video.findById(videoId);
   if (!video) {
-    throw new apiError(404, "Video not found");
+    throw new apiError(404, "Video not found to update");
   }
 
   const videoFile = req.file?.path;
   const thumbnail = req.file?.path;
+  const thumbnailPublicId = extractPublicId(video.thumbnail);
+ 
 
-  if (!thumbnail.url) {
+  try {
+    await deleteFromCloudinary(thumbnailPublicId);
+    const thumbnailLink = await uploadToCloudinary(thumbnail);
+    
+  if (!thumbnailLink.url) {
     throw new apiError(400, "thumbnail is required");
   }
 
-  try {
     const videoDetails = await Video.findByIdAndUpdate(
       videoId,
       {
         title: req.body.title || video.title,
         description: req.body.description || video.description,
         videoFile: videoFile.url || video.videoFile,
-        thumbnail: thumbnail.url,
+        thumbnail: thumbnailLink.url,
       },
       { new: true }
     );
+    console.log(videoDetails);
 
     res
       .status(200)
@@ -165,35 +178,65 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  
+
   //TODO: delete video
 
   const video = await Video.findById(videoId);
-  console.log(video);
+
   if (!video) {
-    throw new apiError(404, "Video not found");
+    throw new apiError(404, "Video not found to delete");
   }
 
   const ownerOfVideo = video.owner.toString();
-  const userId =  req.user?._id.toString();
- console.log(ownerOfVideo, req.user);
+  const userId = req.user?._id.toString();
 
   if (ownerOfVideo !== userId) {
     throw new apiError(403, "You are not authorized to delete this video");
   }
 
+  try {
+    const videoPublicId = extractPublicId(video.videoFile);
+    const thumbnailPublicId = extractPublicId(video.thumbnail);
 
-  const videoPublicId = extractPublicId(video.videoFile);
-  const thumbnailPublicId = extractPublicId(video.thumbnail);
-  console.log(videoPublicId, thumbnailPublicId);
-  // delete from cloudinary
-  await deleteFromCloudinary(videoPublicId);
-  await deleteFromCloudinary(thumbnailPublicId);
-  await Video.findByIdAndDelete(videoId);
+    // delete from cloudinary
+    await deleteFromCloudinary(videoPublicId);
+    await deleteFromCloudinary(thumbnailPublicId);
 
-  res
-    .status(200)
-    .json(new apiResponse(200, null, "Video deleted successfully"));
+    // use the mongoose aggregation pipeline to delete the video and delete all the likes and comments on the video
+    await Comment.deleteMany({ video: videoId });
+
+    // Delete all likes related to the video
+    await Like.deleteMany({ video: videoId });
+
+    // Use aggregation pipeline to delete related comments and likes
+    // await Comment.aggregate([
+    //   { $match: { video: mongoose.Types.ObjectId(videoId) } },
+    //   { $project: { _id: 1 } },
+    // ]).then(async (comments) => {
+    //   const commentIds = comments.map((comment) => comment._id);
+    //   await Comment.deleteMany({ _id: { $in: commentIds } });
+    // });
+
+    // await Like.aggregate([
+    //   { $match: { video: mongoose.Types.ObjectId(videoId) } },
+    //   { $project: { _id: 1 } },
+    // ]).then(async (likes) => {
+    //   const likeIds = likes.map((like) => like._id);
+    //   await Like.deleteMany({ _id: { $in: likeIds } });
+    // });
+
+    await Video.findByIdAndDelete(videoId);
+    
+
+
+
+
+    res
+      .status(200)
+      .json(new apiResponse(200, null, "Video deleted successfully"));
+  } catch (error) {
+    throw new apiError(400, "Error in deleting video");
+  }
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
@@ -202,19 +245,44 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
   if (!video) {
     throw new apiError(404, "Video not found");
   }
-  video.isPublished = !video.isPublished;
-  const updatedVideo = await video.save();
+  try {
+    video.isPublished = !video.isPublished;
+    const updatedVideo = await video.save();
 
-  res.status(200).json(new apiResponse(200, updatedVideo, "Status updated"));
+    res.status(200).json(new apiResponse(200, updatedVideo, "Status updated"));
+  } catch (error) {
+    throw new apiError(400, "Error in toggle publish status");
+  }
+});
 
+// I want to create a controller to get all videos of the user
+
+const getVideosByUser = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new apiError(400, "userId is required to get videos");
+  }
+
+  try {
+    const videos = await Video.find({ owner: userId });
+    res
+      .status(200)
+      .json(new apiResponse(200, videos, "Videos fetched successfully"));
+  } catch (error) {
+    throw new apiError(
+      400,
+      error?.message || "Something went wrong while getting videos"
+    );
+  }
 });
 
 export {
+  getVideosByUser,
   getAllVideos,
   publishAVideo,
   getVideoById,
   updateVideo,
   deleteVideo,
   togglePublishStatus,
-  allVideos
+  allVideos,
 };

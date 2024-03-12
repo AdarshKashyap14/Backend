@@ -50,6 +50,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { subscriberId } = req.params;
+  const userId = req.user?._id;
   if (!subscriberId) {
     throw new apiError(
       400,
@@ -60,23 +61,41 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const subscribers = await Subscription.find({ channel: subscriberId });
     //get the user info of the channel
     const owner = await User.findById(subscribers[0].channel);
+    //check if the current user is subscribed to the channel
+    const isSubscribed = await Subscription.findOne({
+      subscriber: userId,
+      channel: subscriberId,
+    });
+    let data = [];
+    if (isSubscribed) {
+      data = {
+        subscribers: subscribers,
+        owner: {
+          avatar: owner.avatar,
+          username: owner.username,
+        },
+        isSubscribed: true,
+      };
+    } else {
+      data = {
+        subscribers: subscribers,
+        owner: {
+          avatar: owner.avatar,
+          username: owner.username,
+        },
+        isSubscribed: false,
+      };
+    }
     if (!owner) {
       throw new apiError(404, "Owner not found");
     }
-    const responseData = {
-      subscribers: subscribers,
-      owner: {
-        avatar: owner.avatar,
-        username: owner.username,
-      },
-    };
-
+   
     res
       .status(200)
       .json(
         new apiResponse(
           200,
-          responseData,
+         data,
           "Channel subscribers fetched successfully"
         )
       );

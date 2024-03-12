@@ -6,7 +6,8 @@ import {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
-    allVideos
+    allVideos,
+    getVideosByUser
 } from "../controllers/video.controllers.js"
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
 import {upload} from "../middlewares/multers.middlewares.js"
@@ -16,7 +17,7 @@ const router = Router();
 router.route("/allvideos").get(allVideos);
 router
     .route("/")
-    .get(verifyJWT,getAllVideos)
+    .get(getAllVideos)
     .post(verifyJWT,
         upload.fields([
             {
@@ -39,5 +40,6 @@ router
     .patch(verifyJWT,upload.single("thumbnail"), updateVideo);
 
 router.route("/toggle/publish/:videoId").patch(verifyJWT,togglePublishStatus);
+router.route("/allvideos/user").get(verifyJWT,getVideosByUser);
 
 export default router;
