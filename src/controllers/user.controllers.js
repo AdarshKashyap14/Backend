@@ -181,27 +181,32 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingAccessToken =
-    req.cookies?.refreshToken || req.body.refreshToken;
-  if (!incomingAccessToken) {
+  const incomingRefreshToken =
+    req.cookies?.RefreshToken || req.body.refreshToken;
+    console.log(incomingRefreshToken)
+  if (!incomingRefreshToken) {
     throw new apiError(400, "Please provide refresh token");
   }
 
   try {
     const decodedToken = jwt.verify(
-      incomingAccessToken,
+      incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    const user = await User.findById(decodedToken?._id);
+
+
+    const user = await User.findById(decodedToken?._id).select("RefreshToken");
+    console.log(user);
 
     if (!user) {
       throw new apiError(401, "Invalid refresh token");
     }
-
-    if (user?.refreshToken !== incomingAccessToken) {
-      throw new apiError(401, "RefreshToken is expired or used");
-    }
+  
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new apiError(401, "Refresh token is expired or used")
+      
+  }
 
     const option = {
       httpOnly: true,
@@ -254,23 +259,26 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateUserAccount = asyncHandler(async (req, res) => {
   const { fullname, email } = req.body;
-  if (!(fullname || email)) {
-    throw new apiError(400, "Please provide fullname and email");
+
+  // Find the user by ID
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new apiError(404, "User not found");
   }
-  const user = await User.findByIdAndUpdate(
+
+  // If fullname or email is provided, use the provided value, otherwise, fallback to the stored value
+  const updatedFullname = fullname ? fullname : user.fullname;
+  const updatedEmail = email ? email : user.email;
+
+  // Update the user's details
+  const updatedUser = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      fullname,
-      email,
-    },
-    {
-      new: true,
-    }
+    { fullname: updatedFullname, email: updatedEmail },
+    { new: true }
   ).select("-password -refreshToken");
 
-  res
-    .status(200)
-    .json(new apiResponse(200, {user:user}, "User details updated successfully"));
+  res.status(200).json(new apiResponse(200, { user: updatedUser }, "User details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {

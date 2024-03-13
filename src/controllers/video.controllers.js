@@ -17,8 +17,9 @@ const allVideos = asyncHandler(async (req, res) => {
   //TODO: get all videos in videos that are published
 
   const videos = await Video.find({
-    status: "isPublished"
+    isPublished : true
   }).populate("owner", "username avatar");
+
   res
     .status(200)
     .json(new apiResponse(200, videos, "Videos fetched successfully"));
@@ -163,7 +164,7 @@ const updateVideo = asyncHandler(async (req, res) => {
       },
       { new: true }
     );
-    console.log(videoDetails);
+   
 
     res
       .status(200)
@@ -226,10 +227,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     // });
 
     await Video.findByIdAndDelete(videoId);
-    
-
-
-
+  
 
     res
       .status(200)
