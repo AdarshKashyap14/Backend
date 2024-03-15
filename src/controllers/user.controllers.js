@@ -11,7 +11,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     const AccessToken = user.generateAccessToken();
     const RefreshToken = user.generateRefreshToken();
 
-    user.refreshToken = RefreshToken;
+    user.refershToken = RefreshToken;
     await user.save({ validateBeforeSave: false });
 
     return { AccessToken, RefreshToken };
@@ -122,11 +122,8 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const loggedInUser = await User.findById(user._id).select("-password");
 
-  //by this cookies will modifies only server they are visible in the browser
   const option = {
     httpOnly: true,
     secure: true,
@@ -135,12 +132,16 @@ const loginUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .cookie("AccessToken", AccessToken, option)
-    .cookie("RefreshToken", RefreshToken, option)
+    .cookie("refershToken", RefreshToken, option)
     .json(
       new apiResponse(
         200,
         {
-          user: loggedInUser,
+          user: {
+            ...loggedInUser.toObject(), // Convert Mongoose document to plain JavaScript object
+            AccessToken,
+            RefreshToken,
+          },
           AccessToken,
           RefreshToken,
         },
@@ -171,12 +172,11 @@ const logoutUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true,
   };
-  console.log("logout");
 
   return res
     .status(200)
     .clearCookie("AccessToken", option)
-    .clearCookie("RefreshToken", option)
+    .clearCookie("refershToken", option)
     .json(new apiResponse(200, {}, "User logged out successfully"));
 });
 
@@ -201,7 +201,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new apiError(401, "Invalid refresh token");
     }
 
-    if (incomingRefreshToken !== user?.refreshToken) {
+    if (incomingRefreshToken !== user?.refershToken) {
       throw new apiError(401, "Refresh token is expired or used");
     }
 
@@ -216,11 +216,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .cookie("AccessToken", accessToken, option)
-      .cookie("RefreshToken", newrefreshToken, option)
+      .cookie("refershToken", newrefreshToken, option)
       .json(
         new apiResponse(
           200,
-          { accessToken, refreshToken: newrefreshToken },
+          { accessToken, refershToken: newrefreshToken },
           "New access token generated successfully"
         )
       );
