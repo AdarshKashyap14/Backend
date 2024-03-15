@@ -183,7 +183,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies?.RefreshToken || req.body.refreshToken;
-    console.log(incomingRefreshToken)
+  console.log(incomingRefreshToken);
   if (!incomingRefreshToken) {
     throw new apiError(400, "Please provide refresh token");
   }
@@ -194,19 +194,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
-
-
-    const user = await User.findById(decodedToken?._id).select("RefreshToken");
+    const user = await User.findById(decodedToken?._id);
     console.log(user);
 
     if (!user) {
       throw new apiError(401, "Invalid refresh token");
     }
-  
+
     if (incomingRefreshToken !== user?.refreshToken) {
-      throw new apiError(401, "Refresh token is expired or used")
-      
-  }
+      throw new apiError(401, "Refresh token is expired or used");
+    }
 
     const option = {
       httpOnly: true,
@@ -278,7 +275,15 @@ const updateUserAccount = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshToken");
 
-  res.status(200).json(new apiResponse(200, { user: updatedUser }, "User details updated successfully"));
+  res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        { user: updatedUser },
+        "User details updated successfully"
+      )
+    );
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -334,7 +339,9 @@ const updateUSerCoverImage = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new apiResponse(200, {user : user}, "Cover Image updated successfully"));
+    .json(
+      new apiResponse(200, { user: user }, "Cover Image updated successfully")
+    );
 });
 
 const forgetPassword = asyncHandler(async (req, res) => {
