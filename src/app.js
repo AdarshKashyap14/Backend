@@ -9,7 +9,8 @@ app.use(cors({
 
     origin : process.env.CORS_ORIGIN,  // change this to your own domain if you want to allow
     credentials : true 
-})) //use is basically used for middlewares
+}))
+ //use is basically used for middlewares
 
 app.use(express.json({limit : "20kb"}))
 app.use(express.urlencoded({extended: true , limit : "20kb"})); // we use extended  as false by default in express but here we are 
