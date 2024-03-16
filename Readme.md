@@ -1,4 +1,4 @@
-Certainly! Below is a template for the `README.md` file for your YouTube Backend Clone project:
+
 
 ---
 
@@ -24,7 +24,7 @@ This project is a backend system inspired by YouTube's functionality, developed 
 
 ## Installation
 
-1. Clone the repository: `git clone [repository_link]`
+1. Clone the repository: `git clone https://github.com/AdarshKashyap14/Backend`
 2. Install dependencies: `npm install`
 3. Set up environment variables:
    - Create a `.env` file in the root directory.
